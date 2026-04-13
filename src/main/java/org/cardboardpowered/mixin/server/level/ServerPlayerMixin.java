@@ -91,6 +91,10 @@ import net.minecraft.world.level.portal.TeleportTransition;
 import net.minecraft.world.phys.Vec3;
 import org.spongepowered.asm.mixin.injection.callback.LocalCapture;
 
+import org.cardboardpowered.bridge.world.inventory.LecternMenuBridge;
+import org.bukkit.entity.Player;
+import net.minecraft.world.inventory.LecternMenu;
+
 @Mixin(value = ServerPlayer.class, priority = 999)
 public abstract class ServerPlayerMixin extends PlayerMixin implements CommandSourceBridge, ServerPlayerBridge {
 
@@ -327,6 +331,10 @@ public abstract class ServerPlayerMixin extends PlayerMixin implements CommandSo
         } else {
             this.cardboard$nextContainerCounter();
             AbstractContainerMenu container = factory.createMenu(this.containerCounter, ((ServerPlayer)(Object)this).inventory, ((ServerPlayer)(Object)this));
+
+            if (container instanceof LecternMenu) {
+                ((LecternMenuBridge) container).cardboard$setPlayer((Player) ((EntityBridge) (Object) this).getBukkitEntity());
+            }
 
             if (container != null) {
                 ((AbstractContainerMenuBridge)container).setTitle(factory.getDisplayName());

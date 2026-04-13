@@ -13,8 +13,13 @@ public class CraftInventoryLectern extends CraftInventory implements LecternInve
     }
 
     @Override
-    public Lectern getHolder() {
-        return (Lectern) ((ContainerBridge)(Object)inventory).getOwner();
+    public org.bukkit.block.Lectern getHolder() {
+        if (this.inventory instanceof org.cardboardpowered.bridge.world.ContainerBridge bridge) {
+            Object owner = bridge.getOwner();
+            if (owner instanceof org.bukkit.block.Lectern lectern) {
+                return lectern;
+            }
+        }
+        return null;
     }
-
 }

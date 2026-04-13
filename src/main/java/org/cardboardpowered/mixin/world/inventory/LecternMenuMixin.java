@@ -20,8 +20,10 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.cardboardpowered.bridge.world.entity.EntityBridge;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
+import org.cardboardpowered.bridge.world.inventory.LecternMenuBridge;
+
 @Mixin(LecternMenu.class)
-public class LecternMenuMixin extends AbstractContainerMenuMixin {
+public class LecternMenuMixin extends AbstractContainerMenuMixin implements LecternMenuBridge {
 
     @Shadow
     public Container lectern;
@@ -32,9 +34,16 @@ public class LecternMenuMixin extends AbstractContainerMenuMixin {
     private CraftInventoryView bukkitEntity = null;
     private org.bukkit.entity.Player player;
 
+    @Override
+    public void cardboard$setPlayer(org.bukkit.entity.Player player) {
+        this.player = player;
+    }
+
     @Inject(method = "<init>(ILnet/minecraft/world/Container;Lnet/minecraft/world/inventory/ContainerData;)V", at = @At("TAIL"))
     public void setPlayerInv(int i, Container iinventory, ContainerData icontainerproperties, CallbackInfo ci) {
-        this.player = (org.bukkit.entity.Player)((EntityBridge)((Inventory)iinventory).player).getBukkitEntity();
+        if (iinventory instanceof Inventory playerInventory) {
+            this.player = (org.bukkit.entity.Player) ((EntityBridge) playerInventory.player).getBukkitEntity();
+        }
     }
 
     @Override
@@ -71,13 +80,23 @@ public class LecternMenuMixin extends AbstractContainerMenuMixin {
                 case 3:
                     if (!entityhuman.mayBuild()) return false;
 
-                    PlayerTakeLecternBookEvent event = new PlayerTakeLecternBookEvent(player, ((CraftInventoryLectern) getBukkitView().getTopInventory()).getHolder());
-                    Bukkit.getServer().getPluginManager().callEvent(event);
-                    if (event.isCancelled()) return false;
+                    org.bukkit.entity.Player bukkitPlayer = (org.bukkit.entity.Player) ((EntityBridge) entityhuman).getBukkitEntity();
+
+                    org.bukkit.block.Lectern holder = null;
+                    CraftInventoryView view = getBukkitView();
+                    if (view != null && view.getTopInventory() instanceof CraftInventoryLectern lecternInventory) {
+                        holder = lecternInventory.getHolder();
+                    }
+
+                    if (holder != null) {
+                        PlayerTakeLecternBookEvent event = new PlayerTakeLecternBookEvent(bukkitPlayer, holder);
+                        Bukkit.getServer().getPluginManager().callEvent(event);
+                        if (event.isCancelled()) return false;
+                    }
 
                     ItemStack itemstack = this.lectern.removeItemNoUpdate(0);
                     this.lectern.setChanged();
-                    if (!entityhuman.getInventory().add(itemstack))  entityhuman.drop(itemstack, false);
+                    if (!entityhuman.getInventory().add(itemstack)) entityhuman.drop(itemstack, false);
 
                     return true;
                 default:
