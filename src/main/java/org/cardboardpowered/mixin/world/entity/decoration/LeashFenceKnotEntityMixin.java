@@ -50,7 +50,9 @@ public class LeashFenceKnotEntityMixin {
         }
         if (flag) return InteractionResult.CONSUME;
         boolean die = true;
+        boolean unleashedToPlayer = false;
         iterator = list.iterator();
+
         while (iterator.hasNext()) {
             entityinsentient = (Mob) iterator.next();
             if (entityinsentient.isLeashed() && entityinsentient.getLeashHolder() == getBF()) {
@@ -58,11 +60,22 @@ public class LeashFenceKnotEntityMixin {
                     die = false;
                     continue;
                 }
-                // entityinsentient.detachLeash(true, !entityhuman.getAbilities().creativeMode);
-                entityinsentient.dropLeash();
+
+                if (entityinsentient.canHaveALeashAttachedTo(entityhuman)) {
+                    entityinsentient.setLeashedTo(entityhuman, true);
+                    unleashedToPlayer = true;
+                    die = false;
+                }
             }
         }
+
         if (die) getBF().remove(RemovalReason.KILLED);
+
+        if (unleashedToPlayer) {
+            getBF().level().gameEvent(entityhuman, net.minecraft.world.level.gameevent.GameEvent.BLOCK_ATTACH, getBF().blockPosition());
+            getBF().playSound(net.minecraft.sounds.SoundEvents.LEAD_TIED, 1.0F, 1.0F);
+        }
+
         return InteractionResult.CONSUME;
     }
 
