@@ -84,6 +84,7 @@
     "world.entity.ItemBasedSteeringMixin",
     "world.entity.LivingEntityMixin",
     "world.entity.MobMixin",
+    "world.entity.MobLeashInteractMixin",
     "world.entity.ai.attributes.AttributeMapMixin",
     "world.entity.ai.behavior.AssignProfessionFromJobSiteMixin",
     "world.entity.ai.behavior.BehaviorUtilsMixin",
