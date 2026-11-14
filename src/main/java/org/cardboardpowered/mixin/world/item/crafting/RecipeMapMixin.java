@@ -1,7 +1,5 @@
 package org.cardboardpowered.mixin.world.item.crafting;
 
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.Multimap;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.item.crafting.*;
@@ -10,8 +8,9 @@ import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
-import org.spongepowered.asm.mixin.injection.Inject;
-import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
+import com.google.common.collect.LinkedHashMultimap;
+import org.spongepowered.asm.mixin.injection.ModifyArg;
+import java.util.LinkedHashMap;
 
 import java.util.Collection;
 import java.util.Map;
@@ -29,18 +28,30 @@ public abstract class RecipeMapMixin implements RecipeMapBridge {
     @Shadow
     public abstract <I extends RecipeInput, T extends Recipe<I>> Collection<RecipeHolder<T>> byType(RecipeType<T> recipeType);
 
-    @Inject(method = "create", at = @At("HEAD"), cancellable = true)
-    private static void createCraftBukkit(Iterable<RecipeHolder<?>> recipes, CallbackInfoReturnable<RecipeMap> cir) {
-        ImmutableMultimap.Builder<RecipeType<?>, RecipeHolder<?>> builder = ImmutableMultimap.builder();
-        com.google.common.collect.ImmutableMap.Builder<ResourceKey<Recipe<?>>, RecipeHolder<?>> builder1 = ImmutableMap.builder();
+    @ModifyArg(
+            method = "create",
+            at = @At(
+                    value = "INVOKE",
+                    target = "Lnet/minecraft/world/item/crafting/RecipeMap;<init>(Lcom/google/common/collect/Multimap;Ljava/util/Map;)V"
+            ),
+            index = 0
+    )
+    private static Multimap<RecipeType<?>, RecipeHolder<?>> cardboard$makeByTypeMutable(
+            Multimap<RecipeType<?>, RecipeHolder<?>> recipes) {
+        return LinkedHashMultimap.create(recipes);
+    }
 
-        for (RecipeHolder<?> recipeHolder : recipes) {
-            builder.put(recipeHolder.value().getType(), recipeHolder);
-            builder1.put(recipeHolder.id(), recipeHolder);
-        }
-
-        // CraftBukkit start - mutable
-        cir.setReturnValue(new RecipeMap(com.google.common.collect.LinkedHashMultimap.create(builder.build()), com.google.common.collect.Maps.newLinkedHashMap(builder1.build())));
+    @ModifyArg(
+            method = "create",
+            at = @At(
+                    value = "INVOKE",
+                    target = "Lnet/minecraft/world/item/crafting/RecipeMap;<init>(Lcom/google/common/collect/Multimap;Ljava/util/Map;)V"
+            ),
+            index = 1
+    )
+    private static Map<ResourceKey<Recipe<?>>, RecipeHolder<?>> cardboard$makeByKeyMutable(
+            Map<ResourceKey<Recipe<?>>, RecipeHolder<?>> recipes) {
+        return new LinkedHashMap<>(recipes);
     }
 
     @Override

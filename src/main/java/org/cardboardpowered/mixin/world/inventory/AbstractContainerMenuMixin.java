@@ -12,6 +12,7 @@ import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Mutable;
 import org.spongepowered.asm.mixin.Shadow;
+import org.spongepowered.asm.mixin.Unique;
 
 import org.cardboardpowered.CardboardMod;
 import org.cardboardpowered.bridge.world.ContainerBridge;
@@ -31,10 +32,29 @@ public abstract class AbstractContainerMenuMixin implements AbstractContainerMen
 
     public boolean checkReachable = true;
 
+    @Unique
+    private CraftHumanEntity cardboard$viewer;
+
+    @Override
+    public void cardboard$setViewer(CraftHumanEntity player) {
+        this.cardboard$viewer = player;
+    }
+
     @Override
     public InventoryView getBukkitView() {
-        CraftInventory cbi = new CraftInventory(new SimpleContainer( ((AbstractContainerMenu)(Object)this).getItems().toArray(new ItemStack[0]) ));
-        return new CustomInventoryView(null, cbi, ((AbstractContainerMenu)(Object)this));
+        CraftInventory cbi = new CraftInventory(
+                new SimpleContainer(
+                        ((AbstractContainerMenu)(Object)this)
+                                .getItems()
+                                .toArray(new ItemStack[0])
+                )
+        );
+
+        return new CustomInventoryView(
+                this.cardboard$viewer,
+                cbi,
+                ((AbstractContainerMenu)(Object)this)
+        );
     }
 
     @Shadow
@@ -70,17 +90,43 @@ public abstract class AbstractContainerMenuMixin implements AbstractContainerMen
 
     @Override
     public void transferTo(AbstractContainerMenu other, CraftHumanEntity player) {
-        InventoryView source = this.getBukkitView(), destination = ((AbstractContainerMenuBridge)other).getBukkitView();
+        // Устанавливаем игрока для обоих меню
+        this.cardboard$setViewer(player);
+        ((AbstractContainerMenuBridge) other).cardboard$setViewer(player);
 
-        if ((source.getTopInventory() instanceof CustomInventoryView) || source.getBottomInventory() instanceof CustomInventoryView ||
-                destination.getTopInventory() instanceof CustomInventoryView || destination.getBottomInventory() instanceof CustomInventoryView) {
+        InventoryView source = this.getBukkitView();
+        InventoryView destination =
+                ((AbstractContainerMenuBridge) other).getBukkitView();
+
+        // Защита от некорректно созданных InventoryView
+        if (source == null || destination == null ||
+                source.getPlayer() == null || destination.getPlayer() == null) {
             return;
         }
 
-        openOrClose( ((CraftInventory) source.getTopInventory()).getInventory(), player, false);
-        openOrClose( ((CraftInventory) source.getBottomInventory()).getInventory(), player, false);
-        openOrClose( ((CraftInventory) destination.getTopInventory()).getInventory(), player, true);
-        openOrClose( ((CraftInventory) destination.getBottomInventory()).getInventory(), player, true);
+        if ((source.getTopInventory() instanceof CustomInventoryView) ||
+                source.getBottomInventory() instanceof CustomInventoryView ||
+                destination.getTopInventory() instanceof CustomInventoryView ||
+                destination.getBottomInventory() instanceof CustomInventoryView) {
+            return;
+        }
+
+        openOrClose(
+                ((CraftInventory) source.getTopInventory()).getInventory(),
+                player, false
+        );
+        openOrClose(
+                ((CraftInventory) source.getBottomInventory()).getInventory(),
+                player, false
+        );
+        openOrClose(
+                ((CraftInventory) destination.getTopInventory()).getInventory(),
+                player, true
+        );
+        openOrClose(
+                ((CraftInventory) destination.getBottomInventory()).getInventory(),
+                player, true
+        );
     }
 
     public void openOrClose(Container in, CraftHumanEntity plr, boolean open) {

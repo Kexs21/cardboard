@@ -36,6 +36,9 @@ public interface AbstractContainerMenuBridge {
         return null;
     }
 
+    default void cardboard$setViewer(CraftHumanEntity player) {
+    }
+
     default void setTitle(Component title) {
     }
 
