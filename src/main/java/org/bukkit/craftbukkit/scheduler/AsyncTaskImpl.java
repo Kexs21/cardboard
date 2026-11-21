@@ -49,7 +49,24 @@ public class AsyncTaskImpl extends BukkitTaskImpl {
         try {
             super.run();
         } catch (final Throwable t) {
-            getOwner().getLogger().log(Level.WARNING, "Plugin " + getOwner().getDescription().getFullName() + " generated an exception while executing task " + getTaskId(), (thrown = t));
+            thrown = t;
+
+            System.err.println(
+                    "[Cardboard] Async task failed: "
+                            + getTaskId()
+                            + ", plugin: "
+                            + getOwner().getName()
+            );
+
+            t.printStackTrace(System.err);
+
+            getOwner().getLogger().log(
+                    Level.WARNING,
+                    "Plugin " + getOwner().getDescription().getFullName()
+                            + " generated an exception while executing task "
+                            + getTaskId(),
+                    t
+            );
         } finally {
             // Cleanup is important for any async task, otherwise ghost tasks are everywhere
             synchronized (workers) {

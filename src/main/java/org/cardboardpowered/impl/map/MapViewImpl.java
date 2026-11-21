@@ -14,12 +14,21 @@ import org.bukkit.map.MapView;
 
 import org.cardboardpowered.bridge.world.level.LevelBridge;
 
-public final class MapViewImpl implements MapView {
+public class MapViewImpl implements MapView {
 
     private final Map<CraftPlayer, RenderData> renderCache = new HashMap<>();
     private final List<MapRenderer> renderers = new ArrayList<>();
     private final Map<MapRenderer, Map<CraftPlayer, MapCanvasImpl>> canvases = new HashMap<>();
     protected final MapItemSavedData worldMap;
+    private int cardboard$mapId = -1;
+
+    public void cardboard$setMapId(int id) {
+        if (id < 0) {
+            throw new IllegalArgumentException("Invalid map ID: " + id);
+        }
+
+        this.cardboard$mapId = id;
+    }
 
     public MapViewImpl(MapItemSavedData worldMap) {
         this.worldMap = worldMap;
@@ -28,14 +37,13 @@ public final class MapViewImpl implements MapView {
 
     @Override
     public int getId() {
-        String text = worldMap.toString();//// TODO: 1.17ify //.getId();
-        if (text.startsWith("map_")) {
-            try {
-                return Integer.parseInt(text.substring("map_".length()));
-            } catch (NumberFormatException ex) {
-                throw new IllegalStateException("Map has non-numeric ID");
-            }
-        } else throw new IllegalStateException("Map has invalid ID");
+        if (cardboard$mapId < 0) {
+            throw new IllegalStateException(
+                    "Map ID was not initialized"
+            );
+        }
+
+        return cardboard$mapId;
     }
 
     @Override

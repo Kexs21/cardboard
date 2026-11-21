@@ -246,6 +246,53 @@ public class RemapUtils implements IRemapUtils {
         jarRemapper = new BannerJarRemapper(jarMapping);
         remappers.add(jarRemapper);
         remappers.add(new ReflectRemapper());
+        remappers.add(createNmsMappingFallback(mr));
+        remappers.add(new Remapper() {
+
+            @Override
+            public String map(String internalName) {
+                // Исправление пути к CraftPlayer
+                if ("org/cardboardpowered/impl/entity/CraftPlayer"
+                        .equals(internalName)) {
+                    return "org/bukkit/craftbukkit/entity/CraftPlayer";
+                }
+
+                return internalName;
+            }
+
+            @Override
+            public String mapFieldName(
+                    String owner,
+                    String name,
+                    String descriptor
+            ) {
+                // Player.containerMenu
+                if (("net/minecraft/class_3222".equals(owner)
+                        || "net/minecraft/class_1657".equals(owner))
+                        && "cn".equals(name)
+                        && "Lnet/minecraft/class_1703;".equals(descriptor)) {
+                    return "field_7512";
+                }
+
+                return name;
+            }
+
+            @Override
+            public String mapMethodName(
+                    String owner,
+                    String name,
+                    String descriptor
+            ) {
+                // AbstractContainerMenu.broadcastChanges()
+                if ("net/minecraft/class_1703".equals(owner)
+                        && "d".equals(name)
+                        && "()V".equals(descriptor)) {
+                    return "method_7623";
+                }
+
+                return name;
+            }
+        });
         jarMapping.initFastMethodMapping(jarRemapper);
         ReflectMethodRemapper.init();
 
@@ -724,4 +771,128 @@ public class RemapUtils implements IRemapUtils {
 	public boolean shouldExtraDebugLog() {
 		return CardboardConfig.DEBUG_VERBOSE_CALLS;
 	}
+
+    private static Remapper createNmsMappingFallback(MappingResolver mappings) {
+        return new Remapper() {
+
+            private String toOfficial(String internalName) {
+                if (!internalName.startsWith("net/minecraft/")) {
+                    return internalName;
+                }
+
+                String dotted = internalName.replace('/', '.');
+                String official = mappings.unmapClassName("official", dotted);
+
+                if (!official.equals(dotted)) {
+                    return official.replace('.', '/');
+                }
+
+                // Восстанавливаем имена внутренних классов,
+                // например class_9326$a -> kg$a
+                int dollar = internalName.indexOf('$');
+                if (dollar > 0) {
+                    String outer = internalName.substring(0, dollar);
+                    String outerDotted = outer.replace('/', '.');
+                    String officialOuter =
+                            mappings.unmapClassName("official", outerDotted);
+
+                    if (!officialOuter.equals(outerDotted)) {
+                        return officialOuter.replace('.', '/')
+                                + internalName.substring(dollar);
+                    }
+                }
+
+                return internalName;
+            }
+
+            private String toOfficialDescriptor(String descriptor) {
+                return new Remapper() {
+                    @Override
+                    public String map(String name) {
+                        return toOfficial(name);
+                    }
+                }.mapMethodDesc(descriptor);
+            }
+
+            @Override
+            public String map(String internalName) {
+                if (!internalName.startsWith("net/minecraft/")
+                        || !internalName.contains("$")) {
+                    return internalName;
+                }
+
+                String official = toOfficial(internalName);
+
+                if (official.equals(internalName)) {
+                    return internalName;
+                }
+
+                String mapped = mappings.mapClassName(
+                        "official", official.replace('/', '.')
+                ).replace('.', '/');
+
+                return mapped.startsWith("net/minecraft/class_")
+                        ? mapped : internalName;
+            }
+
+            @Override
+            public String mapMethodName(
+                    String owner, String name, String descriptor) {
+
+                if (!owner.startsWith("net/minecraft/")
+                        || name.startsWith("method_")
+                        || name.startsWith("comp_")) {
+                    return name;
+                }
+
+                String officialOwner = toOfficial(owner);
+
+                if (officialOwner.equals(owner)) {
+                    return name;
+                }
+
+                String mapped = mappings.mapMethodName(
+                        "official",
+                        officialOwner.replace('/', '.'),
+                        name,
+                        toOfficialDescriptor(descriptor)
+                );
+
+                return mapped.startsWith("method_") ? mapped : name;
+            }
+
+            @Override
+            public String mapFieldName(
+                    String owner, String name, String descriptor) {
+
+                if (!owner.startsWith("net/minecraft/")
+                        || name.startsWith("field_")
+                        || name.startsWith("comp_")) {
+                    return name;
+                }
+
+                String officialOwner = toOfficial(owner);
+
+                if (officialOwner.equals(owner)) {
+                    return name;
+                }
+
+                String officialDescriptor = new Remapper() {
+                    @Override
+                    public String map(String internalName) {
+                        return toOfficial(internalName);
+                    }
+                }.mapDesc(descriptor);
+
+                String mapped = mappings.mapFieldName(
+                        "official",
+                        officialOwner.replace('/', '.'),
+                        name,
+                        officialDescriptor
+                );
+
+                return mapped.startsWith("field_") ? mapped : name;
+            }
+        };
+    }
 }

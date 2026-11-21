@@ -951,3 +951,4 @@ accessible method net/minecraft/world/entity/Entity getSwimHighSpeedSplashSound 
 accessible method net/minecraft/world/entity/Entity isInvulnerableToBase (Lnet/minecraft/world/damagesource/DamageSource;)Z
 accessible field net/minecraft/server/level/ChunkMap$TrackedEntity serverEntity Lnet/minecraft/server/level/ServerEntity;
 accessible field net/minecraft/world/entity/Entity FLAG_INVISIBLE I
+accessible field net/minecraft/world/level/saveddata/maps/MapItemSavedData carriedByPlayers Ljava/util/Map;

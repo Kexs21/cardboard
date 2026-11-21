@@ -110,6 +110,7 @@ import net.minecraft.world.level.material.Fluid;
 import net.minecraft.world.level.saveddata.maps.MapItemSavedData;
 import net.minecraft.world.level.storage.PlayerDataStorage;
 import net.minecraft.world.phys.Vec3;
+import net.minecraft.world.level.saveddata.maps.MapId;
 import org.apache.commons.lang.Validate;
 import org.bukkit.*;
 import org.bukkit.BanList.Type;
@@ -842,11 +843,28 @@ public class CraftServer implements Server {
     @Override
     public MapView createMap(World world) {
         Validate.notNull(world, "World cannot be null");
+        ServerLevel level = ((CraftWorld) world).getHandle();
+        MapId mapId = level.getFreeMapId();
+        MapItemSavedData mapData = MapItemSavedData.createFresh(
+                0.0D,
+                0.0D,
+                (byte) 3,
+                false,
+                false,
+                level.dimension()
+        );
+        level.setMapData(mapId, mapData);
+        MapViewImpl view = ((MapItemSavedDataBridge) mapData).getMapViewBF();
 
-        net.minecraft.world.item.ItemStack stack = new net.minecraft.world.item.ItemStack(Items.MAP, 1);
-        // MapState worldmap = FilledMapItem.getOrCreateMapState(stack, ((CraftWorld) world).getHandle());
-        MapItemSavedData worldmap = MapItem.getSavedData(stack, ((CraftWorld) world).getHandle());
-        return ((MapItemSavedDataBridge)worldmap).getMapViewBF();
+        if (view == null) {
+            throw new IllegalStateException(
+                    "Cardboard failed to initialize MapView"
+            );
+        }
+
+        view.cardboard$setMapId(mapId.id());
+
+        return view;
     }
 
     @Override

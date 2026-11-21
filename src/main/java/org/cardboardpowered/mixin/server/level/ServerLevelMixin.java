@@ -37,6 +37,12 @@ import net.minecraft.world.level.entity.LevelEntityGetter;
 import net.minecraft.world.level.entity.PersistentEntitySectionManager;
 import net.minecraft.world.level.storage.LevelStorageSource;
 import net.minecraft.world.level.storage.ServerLevelData;
+import net.minecraft.world.level.saveddata.maps.MapId;
+import net.minecraft.world.level.saveddata.maps.MapItemSavedData;
+import org.cardboardpowered.bridge.world.level.saveddata.maps.MapItemSavedDataBridge;
+import org.cardboardpowered.impl.map.MapViewImpl;
+import org.spongepowered.asm.mixin.Unique;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 @Mixin(ServerLevel.class)
 public class ServerLevelMixin extends LevelMixin implements ServerLevelBridge {
@@ -172,5 +178,48 @@ public class ServerLevelMixin extends LevelMixin implements ServerLevelBridge {
 		}
 		ci.cancel();
 		// Paper end
+	}
+
+	/**
+	 * Привязываем реальный ID к Bukkit MapView
+	 * после сохранения карты в Minecraft.
+	 */
+	@Inject(method = "setMapData", at = @At("TAIL"))
+	private void cardboard$assignMapIdOnSave(
+			MapId mapId,
+			MapItemSavedData mapData,
+			CallbackInfo ci
+	) {
+		cardboard$bindMapId(mapId, mapData);
+	}
+
+	/**
+	 * Восстанавливаем ID при получении существующей
+	 * карты, в том числе после перезапуска сервера.
+	 */
+	@Inject(method = "getMapData", at = @At("RETURN"))
+	private void cardboard$assignMapIdOnLoad(
+			MapId mapId,
+			CallbackInfoReturnable<MapItemSavedData> cir
+	) {
+		cardboard$bindMapId(mapId, cir.getReturnValue());
+	}
+
+	@Unique
+	private void cardboard$bindMapId(
+			MapId mapId,
+			MapItemSavedData mapData
+	) {
+		if (mapId == null || mapData == null) {
+			return;
+		}
+
+		MapViewImpl view =
+				((MapItemSavedDataBridge) (Object) mapData)
+						.getMapViewBF();
+
+		if (view != null) {
+			view.cardboard$setMapId(mapId.id());
+		}
 	}
 }

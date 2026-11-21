@@ -1,6 +1,8 @@
 package org.cardboardpowered.impl;
 
 import net.minecraft.world.level.block.Block;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.resources.Identifier;
 
 public class CardboardModdedBlock implements CardboardModdedMaterial {
 
@@ -28,7 +30,11 @@ public class CardboardModdedBlock implements CardboardModdedMaterial {
 
     @Override
     public boolean isItem() {
-        return false;
+        Identifier itemId = this.id != null
+                ? Identifier.parse(this.id)
+                : BuiltInRegistries.BLOCK.getKey(this.block);
+
+        return BuiltInRegistries.ITEM.getOptional(itemId).isPresent();
     }
 
     @Override
