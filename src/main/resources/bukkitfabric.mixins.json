@@ -176,6 +176,7 @@
     "world.level.BaseCommandBlockMixin",
     "world.level.BlockGetterMixin",
     "world.level.ExplosionMixin",
+    "world.level.ServerExplosionMixin",
     "world.level.LevelAccessorMixin",
     "world.level.LevelMixin",
     "world.level.ServerLevelAccessorMixin",
